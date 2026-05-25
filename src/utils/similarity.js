@@ -15,7 +15,11 @@ export function cosineSimilarity(vecA, vecB) {
 
 // Calculate similarity based on shared notes (Jaccard-like approach for text features)
 export function calculateNoteSimilarity(perfumeA, perfumeB) {
-  const getNotes = (p) => [...p.topNotes, ...p.middleNotes, ...p.baseNotes].map(n => n.toLowerCase());
+  const getNotes = (p) => [
+    ...(p.topNotes || []),
+    ...(p.middleNotes || []),
+    ...(p.baseNotes || []),
+  ].map(n => n.toLowerCase());
   
   const notesA = new Set(getNotes(perfumeA));
   const notesB = new Set(getNotes(perfumeB));
@@ -41,11 +45,14 @@ export function calculateSpatialDistance(coordA, coordB) {
 export function findSimilarPerfumes(targetPerfume, allPerfumes, limit = 3) {
   const others = allPerfumes.filter(p => p.id !== targetPerfume.id);
   
-  const withDistances = others.map(p => {
-    const dist = calculateSpatialDistance(targetPerfume.coordinates, p.coordinates);
-    // Convert distance to a similarity score (closer = higher score, max 100%)
-    // Assuming max realistic distance in our mock space is around 4.0
-    const score = Math.max(0, 100 - (dist / 4.0) * 100);
+  const distances = others.map(p =>
+    calculateSpatialDistance(targetPerfume.coordinates, p.coordinates)
+  );
+  const maxDist = Math.max(...distances, 0.01);
+
+  const withDistances = others.map((p, i) => {
+    const dist = distances[i];
+    const score = Math.max(0, 100 - (dist / maxDist) * 100);
     
     return {
       ...p,

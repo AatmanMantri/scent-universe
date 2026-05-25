@@ -1,25 +1,54 @@
 # Scent Universe - Agent Handover Context
 
-## Current Project Status (V1)
-We have successfully built the **V1 React Front-End** and the **V1 Python Scraper**.
-The frontend is a 3D visualization using `react-three-fiber` that plots perfumes in a 3D spatial coordinate system, alongside tabs to find similar perfumes and compare their notes.
-It is currently using **Mock Data** (`src/data/mockPerfumes.js`) for the UI to allow for rapid frontend development without waiting for scraping.
+## V1 shipped
 
-## The Scraper Issue & Next Steps
-The python scraper (`scraper/scrape_and_embed.py`) uses `ScrapeGraphAI` to extract structured JSON (Top/Middle/Base notes) from e-commerce websites and then uses `umap-learn` to mathematically plot them in 3D space.
+**React UI** — Universe (3D), Find Similar, Compare, Browse.
 
-**Where we left off:**
-The user ran the scraper locally using a standard `ollama/llama3` (8B) model. 
-However, standard Llama 3 struggles with the massive HTML payloads of the perfume websites. It got overwhelmed, returned blank notes/Unknown names, and eventually froze up on the second run.
+**Data** — Shopify JSON scraper (no LLM), ~314 perfumes in `src/data/scrapedPerfumes.json`.
 
-**Task for the Next Agent:**
-1. **Fix the Scraper Extraction:** You need to work with the user to upgrade the extraction model. You can either:
-   - Ask the user to pull a larger local model (`ollama pull llama3.1` or `mistral`) and update the script.
-   - Switch the script to use a fast, free cloud API like **Groq** (`llama-3-70b-versatile`) or **Gemini**.
-2. **Refine Scraper Prompt:** If the extraction still fails or misses notes, refine the `PROMPT` in `scrape_and_embed.py` or use a custom `ScrapeGraphAI` schema.
-3. **Execute & Replace Data:** Once the scraper successfully runs, it will output a `scrapedPerfumes.json` file (thanks to the incremental caching we just added). Your job is to take that JSON, place it in `src/data/`, and update the React components to import the real data instead of the mock data.
-4. **Begin V2 (NLP Embeddings):** The user's ultimate goal is to move from simple bag-of-words note matching (V1) to full semantic NLP embeddings (V2). You should update the python script to use HuggingFace `sentence-transformers` to embed the full descriptions/stories of the perfumes, ensuring that scents that "feel" similar (e.g., "dark, smoky") cluster together even if they don't share exact ingredient strings.
+**Default filters** (Browse / Compare / Find Similar + Universe on load):
 
-## Collaboration Workflow
-We are tracking progress through this file.
-When you complete a step, please update this `HANDOVER_PLAN.md` file (or use GitHub Issues if the user has pushed this to a remote repo) so that if the user switches laptops again, the next agent knows exactly what was achieved.
+- Hide gifts and sample sets
+- Hide accessories (beard balm, car perfume, etc.)
+- All brands enabled; “require notes” off
+
+Universe can relax filters to see the full catalog (~314). Layout uses bag-of-words + UMAP on note/description text — not semantic “vibe” AI.
+
+## How to refresh data
+
+```bash
+cd scent-universe
+source venv/bin/activate
+pip install -r scraper/requirements.txt
+python scraper/fetch_shopify.py
+python scraper/fetch_shopify.py --force
+```
+
+**Stores:** fraganote.com, houseofkanzan.com, www.houseofem5.com, rivona.in
+
+**Kanzan notes:** parsed from product HTML (`First Impression` / `The Heart` / `The Sillage`).
+
+## Key files
+
+| File | Role |
+|------|------|
+| [scraper/fetch_shopify.py](scraper/fetch_shopify.py) | Fetch, parse, UMAP, write JSON |
+| [src/data/scrapedPerfumes.json](src/data/scrapedPerfumes.json) | Generated catalog |
+| [src/data/perfumes.js](src/data/perfumes.js) | `allPerfumes` + default-filtered `perfumes` |
+| [src/utils/perfumeFilters.js](src/utils/perfumeFilters.js) | Client filters + coord normalize |
+| [src/components/PerfumePicker.jsx](src/components/PerfumePicker.jsx) | Searchable Compare picker |
+
+## Deprecated
+
+- [scraper/scrape_and_embed.py](scraper/scrape_and_embed.py) — ScrapeGraphAI + Ollama; do not use
+
+## V2 (deferred)
+
+- `sentence-transformers` + `--semantic` UMAP
+- `--force` re-scrape after tighter `EXCLUDE_RE`
+- Rivona collection-specific URL
+- Shared filter state in App header (optional)
+
+## Collaboration
+
+Update this file after major data or architecture changes.

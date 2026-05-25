@@ -1,19 +1,19 @@
 import { useState } from 'react';
 import { Search } from 'lucide-react';
-import { mockPerfumes } from '../data/mockPerfumes';
+import { perfumes } from '../data/perfumes';
 import { findSimilarPerfumes } from '../utils/similarity';
 
 export default function FindSimilar() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPerfume, setSelectedPerfume] = useState(null);
 
-  const filteredPerfumes = mockPerfumes.filter(p => 
+  const filteredPerfumes = perfumes.filter(p => 
     p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
     p.brand.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const similarPerfumes = selectedPerfume 
-    ? findSimilarPerfumes(selectedPerfume, mockPerfumes, 4) 
+    ? findSimilarPerfumes(selectedPerfume, perfumes, 4) 
     : [];
 
   return (
@@ -35,9 +35,14 @@ export default function FindSimilar() {
 
       {!selectedPerfume && (
         <div>
-          <h3 style={{ marginBottom: '24px', color: 'var(--text-secondary)' }}>Select a perfume to find similarities</h3>
+          <h3 style={{ marginBottom: '8px', color: 'var(--text-secondary)' }}>
+            Select a perfume to find similarities ({perfumes.length} in catalog)
+          </h3>
+          <p style={{ marginBottom: '24px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+            Nearest matches use 3D distance from shared note text — search to narrow the list.
+          </p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '20px' }}>
-            {filteredPerfumes.map(perfume => (
+            {(searchTerm ? filteredPerfumes : filteredPerfumes.slice(0, 48)).map(perfume => (
               <div 
                 key={perfume.id} 
                 className="glass-panel card" 
@@ -47,11 +52,16 @@ export default function FindSimilar() {
                 <div style={{ color: 'var(--accent-gold)', fontSize: '0.8rem', marginBottom: '4px' }}>{perfume.brand}</div>
                 <h4 style={{ fontSize: '1.2rem', marginBottom: '12px' }}>{perfume.name}</h4>
                 <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                  {perfume.topNotes.slice(0, 2).map(n => <span key={n} className="pill">{n}</span>)}
+                  {(perfume.topNotes || []).slice(0, 2).map(n => <span key={n} className="pill">{n}</span>)}
                 </div>
               </div>
             ))}
           </div>
+          {!searchTerm && filteredPerfumes.length > 48 && (
+            <p style={{ marginTop: '16px', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+              Showing 48 of {filteredPerfumes.length} — type above to search.
+            </p>
+          )}
         </div>
       )}
 
@@ -77,7 +87,7 @@ export default function FindSimilar() {
               <div style={{ fontSize: '0.85rem' }}>
                 <div style={{ marginBottom: '8px' }}><strong style={{ color: 'white' }}>Key Notes:</strong></div>
                 <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                  {[...selectedPerfume.topNotes, ...selectedPerfume.middleNotes, ...selectedPerfume.baseNotes].map(n => (
+                  {[...(selectedPerfume.topNotes || []), ...(selectedPerfume.middleNotes || []), ...(selectedPerfume.baseNotes || [])].map(n => (
                     <span key={n} className="pill" style={{ background: 'rgba(255,255,255,0.05)' }}>{n}</span>
                   ))}
                 </div>
@@ -89,7 +99,7 @@ export default function FindSimilar() {
               <h3 style={{ marginBottom: '24px', fontSize: '1.5rem' }}>Nearest Matches in the Scent Space</h3>
               
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                {similarPerfumes.map((match, index) => (
+                {similarPerfumes.map((match) => (
                   <div key={match.id} className="glass-panel card" style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
                     
                     <div style={{ 
@@ -112,8 +122,8 @@ export default function FindSimilar() {
                       <h4 style={{ fontSize: '1.2rem', marginBottom: '8px' }}>{match.name}</h4>
                       
                       <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                        {match.topNotes.slice(0,2).map(n => <span key={n} className="pill">{n}</span>)}
-                        {match.baseNotes.slice(0,1).map(n => <span key={n} className="pill">{n}</span>)}
+                        {(match.topNotes || []).slice(0,2).map(n => <span key={n} className="pill">{n}</span>)}
+                        {(match.baseNotes || []).slice(0,1).map(n => <span key={n} className="pill">{n}</span>)}
                       </div>
                     </div>
                     

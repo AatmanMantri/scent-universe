@@ -1,20 +1,25 @@
 import { useState } from 'react';
-import { mockPerfumes } from '../data/mockPerfumes';
+import { perfumes } from '../data/perfumes';
 
 export default function Browse() {
   const [filterBrand, setFilterBrand] = useState('All');
   
-  const brands = ['All', ...new Set(mockPerfumes.map(p => p.brand))];
+  const brands = ['All', ...new Set(perfumes.map(p => p.brand))];
 
   const filtered = filterBrand === 'All' 
-    ? mockPerfumes 
-    : mockPerfumes.filter(p => p.brand === filterBrand);
+    ? perfumes 
+    : perfumes.filter(p => p.brand === filterBrand);
 
   return (
     <div style={{ padding: '40px', maxWidth: '1200px', margin: '0 auto' }}>
       
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
-        <h2>Browse Collection ({filtered.length})</h2>
+        <div>
+          <h2>Browse Collection ({filtered.length})</h2>
+          <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
+            Default view hides gifts and accessories (same as Universe)
+          </p>
+        </div>
         
         <div style={{ display: 'flex', gap: '8px' }}>
           {brands.map(brand => (
@@ -47,8 +52,8 @@ export default function Browse() {
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.85rem' }}>
-              <div><strong style={{ color: 'white' }}>Top:</strong> <span style={{ color: 'var(--text-secondary)' }}>{perfume.topNotes.join(', ')}</span></div>
-              <div><strong style={{ color: 'white' }}>Base:</strong> <span style={{ color: 'var(--text-secondary)' }}>{perfume.baseNotes.join(', ')}</span></div>
+              <div><strong style={{ color: 'white' }}>Top:</strong> <span style={{ color: 'var(--text-secondary)' }}>{(perfume.topNotes || []).join(', ') || '—'}</span></div>
+              <div><strong style={{ color: 'white' }}>Base:</strong> <span style={{ color: 'var(--text-secondary)' }}>{(perfume.baseNotes || []).join(', ') || '—'}</span></div>
             </div>
           </div>
         ))}

@@ -28,3 +28,4 @@ venv/
 .env
 __pycache__/
 raw_scraped_data.json
+raw_shopify_cache.json

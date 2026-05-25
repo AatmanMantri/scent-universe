@@ -7,6 +7,8 @@ import umap
 from dotenv import load_dotenv
 
 """
+DEPRECATED — use fetch_shopify.py instead (Shopify JSON, no LLM).
+
 PERFUME UNIVERSE SCRAPER & VECTORIZER (V1 - Notes Based)
 
 Dependencies required:
