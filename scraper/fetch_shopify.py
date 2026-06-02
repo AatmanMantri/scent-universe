@@ -44,7 +44,10 @@ EXCLUDE_RE = re.compile(
     r"moisturizer|serum only|toner only|mask only|"
     r"buy any \d|combo pack|bundle of|discovery set|sampler set|"
     r"build your own|choose any|gift set|sample set|experience sample|"
-    r"customise your|customize your|beard balm|beard oil)\b",
+    r"customise your|customize your|beard balm|beard oil|"
+    r"body mist|room spray|room freshener|scented candle|wax melt|"
+    r"reed diffuser|car freshener|hair mist|solid perfume|solid cologne|"
+    r"perfume oil only|attar oil only|skincare set|face serum|face cream)\b",
     re.I,
 )
 
@@ -435,6 +438,71 @@ def vectorize_and_umap(perfumes: list[dict]) -> list[dict]:
     return perfumes
 
 
+def vectorize_and_umap_semantic(perfumes: list[dict]) -> list[dict]:
+    """Encode perfume text with sentence-transformers, then project to 3D via UMAP.
+
+    Falls back to bag-of-words if sentence_transformers is unavailable.
+    """
+    try:
+        from sentence_transformers import SentenceTransformer
+    except ImportError:
+        print("  [warn] sentence-transformers not found — falling back to bag-of-words.")
+        return vectorize_and_umap(perfumes)
+
+    documents = []
+    valid = []
+    for p in perfumes:
+        doc = build_document(p)
+        if doc:
+            documents.append(doc)
+            valid.append(p)
+        else:
+            print(f"  Skipping (empty doc): {p.get('name')}")
+
+    if len(valid) < 3:
+        print(f"  Only {len(valid)} perfumes with text — using simple layout")
+        for i, p in enumerate(valid):
+            p["coordinates"] = [float(i - len(valid) / 2), 0.0, 0.0]
+            p["color"] = brand_color(p["brand"])
+        for p in perfumes:
+            if "coordinates" not in p:
+                p["coordinates"] = [0.0, 0.0, 0.0]
+                p["color"] = brand_color(p["brand"])
+        return perfumes
+
+    print("  Loading model: sentence-transformers/all-MiniLM-L6-v2 ...")
+    model = SentenceTransformer("all-MiniLM-L6-v2")
+    print(f"  Encoding {len(documents)} documents (batch_size=64)...")
+    embeddings = model.encode(
+        documents,
+        show_progress_bar=True,
+        batch_size=64,
+        convert_to_numpy=True,
+    )
+
+    n = len(valid)
+    n_neighbors = min(15, max(2, n - 1))
+    print(f"  UMAP: {n} x {embeddings.shape[1]} → 3D (n_neighbors={n_neighbors})...")
+    reducer = umap.UMAP(n_components=3, random_state=42, n_neighbors=n_neighbors)
+    coords = reducer.fit_transform(embeddings)
+
+    for i, p in enumerate(valid):
+        p["coordinates"] = [
+            float(coords[i][0]),
+            float(coords[i][1]),
+            float(coords[i][2]),
+        ]
+        p["color"] = brand_color(p["brand"])
+
+    for p in perfumes:
+        if "coordinates" not in p:
+            p["coordinates"] = [0.0, 0.0, 0.0]
+            p["color"] = brand_color(p["brand"])
+
+    normalize_coords_list(perfumes)
+    return perfumes
+
+
 def fetch_all_stores(force: bool = False) -> list[dict]:
     if not force and CACHE_FILE.exists():
         try:
@@ -470,6 +538,11 @@ def fetch_all_stores(force: bool = False) -> list[dict]:
 def main():
     parser = argparse.ArgumentParser(description="Fetch Shopify perfume catalogs")
     parser.add_argument("--force", action="store_true", help="Ignore cache and refetch")
+    parser.add_argument(
+        "--semantic",
+        action="store_true",
+        help="Use sentence-transformers semantic embeddings (slower, richer clusters)",
+    )
     args = parser.parse_args()
 
     perfumes = fetch_all_stores(force=args.force)
@@ -477,8 +550,12 @@ def main():
         print("No perfumes fetched.")
         return 1
 
-    print(f"\nVectorizing {len(perfumes)} perfumes...")
-    perfumes = vectorize_and_umap(perfumes)
+    if args.semantic:
+        print(f"\nVectorizing {len(perfumes)} perfumes with semantic embeddings...")
+        perfumes = vectorize_and_umap_semantic(perfumes)
+    else:
+        print(f"\nVectorizing {len(perfumes)} perfumes with bag-of-words (use --semantic for richer clusters)...")
+        perfumes = vectorize_and_umap(perfumes)
 
     # Strip internal fields for frontend
     output = []
